@@ -258,38 +258,6 @@ html, body {
 }
 #backlog-close:hover { color: #fff; }
 
-/* ---- Rotate Prompt (portrait mobile) ---- */
-#rotate-prompt {
-  display: none;
-  position: fixed; inset: 0;
-  background: #0a0a0e;
-  z-index: 9999;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-}
-#rotate-prompt .rotate-icon {
-  font-size: 64px;
-  animation: rotateHint 1.5s ease-in-out infinite;
-}
-@keyframes rotateHint {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(90deg); }
-}
-#rotate-prompt .rotate-text {
-  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  font-size: 16px;
-  color: #c8a882;
-  letter-spacing: 0.1em;
-}
-@media (orientation: portrait) {
-  #rotate-prompt { display: flex; }
-}
-@media (orientation: landscape) {
-  #rotate-prompt { display: none !important; }
-}
-
 /* ---- Responsive ---- */
 @media (max-width: 768px) {
   #textbox { padding: 14px 18px 16px; min-height: 110px; }
@@ -309,11 +277,6 @@ html, body {
 <body>
 
 <div id="game-wrapper">
-  <!-- Rotate device hint -->
-  <div id="rotate-prompt">
-    <span class="rotate-icon">📱</span>
-    <span class="rotate-text">请将手机横屏游玩</span>
-  </div>
   <!-- Phaser canvas injected here -->
   <div id="ui-overlay">
     <!-- Text Box -->
