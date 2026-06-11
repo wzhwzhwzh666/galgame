@@ -1,0 +1,14 @@
+venv/
+node_modules/
+*.zip
+generate_voices*.mjs
+generate_voices*.ps1
+gen_voices*.py
+gen_voices*.mjs
+inject_voices.mjs
+voice_tasks.json
+AI_PROMPTS.md
+test*.mp3
+test*.wav
+*.png
+!assets/**/*.png

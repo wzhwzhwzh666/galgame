@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>黄昏教室 — 视觉小说</title>
+<style>
+/* ===== Reset & Base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%; overflow: hidden;
+  background: #000;
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', system-ui, sans-serif;
+  color: #e8e4e0;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#game-wrapper {
+  position: relative;
+  width: 100vw; height: 100vh;
+  overflow: hidden;
+}
+
+/* Phaser canvas fills the wrapper */
+#game-wrapper canvas {
+  display: block;
+}
+
+/* ===== DOM Overlay Layer (above canvas) ===== */
+#ui-overlay {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+#ui-overlay > * { pointer-events: auto; }
+
+/* ---- Text Box ---- */
+#textbox-container {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 0 32px 24px;
+  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  pointer-events: auto;
+}
+#textbox-container.hidden { transform: translateY(105%); }
+
+#textbox {
+  background: rgba(10, 10, 14, 0.92);
+  border: 1px solid rgba(200, 168, 130, 0.35);
+  border-radius: 12px;
+  padding: 20px 28px 22px;
+  min-height: 130px;
+  position: relative;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 4px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+#name-tag {
+  position: absolute; top: -36px; left: 24px;
+  background: #1a1a24;
+  border: 1px solid rgba(200, 168, 130, 0.35);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 8px 22px;
+  font-size: 15px; font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #c8a882;
+  min-width: 60px; text-align: center;
+  transition: opacity 0.3s;
+}
+#name-tag.hidden { opacity: 0; }
+
+#dialogue-text {
+  font-family: 'Noto Serif SC', 'Source Han Serif SC', 'SimSun', Georgia, serif;
+  font-size: 18px; line-height: 1.9;
+  letter-spacing: 0.03em;
+  min-height: 68px;
+  color: #d8d4d0;
+}
+
+#click-indicator {
+  position: absolute; bottom: 10px; right: 24px;
+  opacity: 0; transition: opacity 0.3s;
+  font-size: 12px; color: #c8a882;
+}
+#click-indicator.visible {
+  opacity: 0.5;
+  animation: clickBounce 1s ease-in-out infinite;
+}
+@keyframes clickBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+
+/* ---- Choice Buttons ---- */
+#choices-container {
+  position: absolute; bottom: 26%; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; gap: 12px;
+  align-items: center;
+  transition: opacity 0.4s;
+}
+#choices-container.hidden { opacity: 0; pointer-events: none; }
+
+.choice-btn {
+  background: rgba(20, 20, 32, 0.9);
+  border: 1px solid rgba(200, 168, 130, 0.3);
+  border-radius: 8px;
+  color: #e8e4e0;
+  font-size: 16px;
+  padding: 14px 36px;
+  cursor: pointer;
+  min-width: 280px;
+  text-align: center;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  letter-spacing: 0.05em;
+  animation: choiceIn 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  font-family: inherit;
+}
+.choice-btn:nth-child(1) { animation-delay: 0.1s; }
+.choice-btn:nth-child(2) { animation-delay: 0.2s; }
+.choice-btn:nth-child(3) { animation-delay: 0.3s; }
+@keyframes choiceIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.choice-btn:hover {
+  background: rgba(40, 36, 52, 0.95);
+  border-color: #c8a882;
+  color: #fff;
+  transform: translateX(8px);
+  box-shadow: 0 4px 20px rgba(200, 168, 130, 0.15);
+}
+
+/* ---- Quick Menu ---- */
+#quick-menu {
+  position: absolute; top: 16px; right: 20px;
+  display: flex; gap: 14px;
+}
+.quick-btn {
+  background: transparent; border: none;
+  color: rgba(255,255,255,0.4);
+  font-size: 13px; cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 0.06em;
+  padding: 6px 10px;
+  transition: color 0.3s;
+}
+.quick-btn:hover { color: #fff; }
+
+/* ---- Overlay Panels (Settings, Save/Load) ---- */
+.overlay {
+  position: absolute; inset: 0;
+  background: rgba(5, 5, 10, 0.94);
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.4s, visibility 0.4s;
+}
+.overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+.overlay-panel {
+  background: rgba(18, 18, 28, 0.95);
+  border: 1px solid rgba(200, 168, 130, 0.25);
+  border-radius: 12px;
+  padding: 40px 48px;
+  min-width: 380px;
+  max-width: 90vw;
+}
+.overlay-title {
+  font-family: 'Noto Serif SC', Georgia, serif;
+  font-size: 24px; letter-spacing: 0.12em;
+  color: #c8a882; margin-bottom: 32px; text-align: center;
+}
+
+.setting-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px; gap: 24px;
+}
+.setting-label { font-size: 14px; letter-spacing: 0.06em; color: #b0a89c; }
+.setting-value { font-size: 13px; color: #c8a882; min-width: 40px; text-align: center; }
+
+.vol-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 140px; height: 4px;
+  background: rgba(200,168,130,0.2);
+  border-radius: 2px; outline: none; cursor: pointer;
+}
+.vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 18px; height: 18px;
+  background: #c8a882; border-radius: 50%; cursor: pointer;
+}
+.vol-slider::-moz-range-thumb {
+  width: 18px; height: 18px;
+  background: #c8a882; border-radius: 50%; border: none; cursor: pointer;
+}
+
+.toggle-btn {
+  background: transparent;
+  border: 1px solid rgba(200,168,130,0.3);
+  color: #b0a89c; padding: 6px 18px; cursor: pointer;
+  border-radius: 4px; font-family: inherit; font-size: 13px;
+  transition: all 0.3s;
+}
+.toggle-btn.active { background: rgba(200,168,130,0.15); border-color: #c8a882; color: #fff; }
+
+.overlay-back-btn {
+  display: block; margin: 28px auto 0;
+  background: transparent;
+  border: 1px solid rgba(200,168,130,0.3);
+  color: #c8b8a4; padding: 10px 32px; cursor: pointer;
+  font-family: inherit; font-size: 14px; border-radius: 4px;
+  letter-spacing: 0.08em; transition: all 0.3s;
+}
+.overlay-back-btn:hover { background: rgba(200,168,130,0.08); border-color: #c8a882; color: #fff; }
+
+/* ---- Save Slots ---- */
+.save-slots { display: flex; flex-direction: column; gap: 10px; }
+.save-slot {
+  background: rgba(15, 15, 24, 0.8);
+  border: 1px solid rgba(200,168,130,0.15);
+  border-radius: 8px; padding: 14px 20px; cursor: pointer;
+  display: flex; justify-content: space-between; align-items: center;
+  transition: all 0.3s; min-height: 56px;
+}
+.save-slot:hover { border-color: rgba(200,168,130,0.4); background: rgba(25, 25, 38, 0.85); }
+.save-slot.empty { color: #555; }
+.save-slot-num { font-size: 13px; color: #c8a882; font-weight: 600; min-width: 24px; }
+.save-slot-info { flex: 1; margin-left: 16px; font-size: 13px; color: #888; }
+.save-slot-date { font-size: 11px; color: #555; }
+.save-actions { display: flex; gap: 16px; margin-top: 24px; justify-content: center; }
+
+/* ---- Backlog ---- */
+#backlog-overlay {
+  position: absolute; inset: 0;
+  background: rgba(5,5,10,0.95);
+  overflow-y: auto; padding: 40px;
+  transition: opacity 0.3s, visibility 0.3s;
+}
+#backlog-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.backlog-entry { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.backlog-char { font-size: 13px; color: #c8a882; font-weight: 600; margin-bottom: 4px; }
+.backlog-text { font-family: 'Noto Serif SC', Georgia, serif; font-size: 15px; color: #aaa; line-height: 1.7; }
+
+#backlog-close {
+  position: sticky; top: 20px; float: right;
+  background: transparent; border: none;
+  color: #888; font-size: 24px; cursor: pointer; z-index: 2;
+}
+#backlog-close:hover { color: #fff; }
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+  #textbox { padding: 14px 18px 16px; min-height: 110px; }
+  #dialogue-text { font-size: 15px; line-height: 1.7; }
+  #name-tag { font-size: 13px; padding: 6px 16px; top: -28px; }
+  #textbox-container { padding: 0 16px 12px; }
+  .choice-btn { min-width: 220px; font-size: 14px; padding: 12px 24px; }
+  .overlay-panel { padding: 28px 24px; min-width: auto; }
+}
+@media (max-width: 480px) {
+  #dialogue-text { font-size: 14px; line-height: 1.6; }
+  #choices-container { bottom: 32%; }
+  .choice-btn { min-width: 180px; font-size: 13px; padding: 10px 18px; }
+}
+</style>
+</head>
+<body>
+
+<div id="game-wrapper">
+  <!-- Phaser canvas injected here -->
+  <div id="ui-overlay">
+    <!-- Text Box -->
+    <div id="textbox-container" class="hidden">
+      <div id="textbox">
+        <div id="name-tag" class="hidden"></div>
+        <div id="dialogue-text"></div>
+        <div id="click-indicator">▼</div>
+      </div>
+    </div>
+
+    <!-- Choices -->
+    <div id="choices-container" class="hidden"></div>
+
+    <!-- Quick Menu -->
+    <div id="quick-menu" style="pointer-events: auto;">
+      <button class="quick-btn" id="btn-backlog">履历</button>
+      <button class="quick-btn" id="btn-save">存档</button>
+      <button class="quick-btn" id="btn-load">读档</button>
+      <button class="quick-btn" id="btn-settings">设置</button>
+    </div>
+
+    <!-- Settings Overlay -->
+    <div id="settings-overlay" class="overlay hidden">
+      <div class="overlay-panel">
+        <div class="overlay-title">设 置</div>
+        <div class="setting-row">
+          <span class="setting-label">文字速度</span>
+          <span class="setting-value" id="speed-label">中</span>
+          <input type="range" class="vol-slider" id="speed-slider" min="1" max="5" value="3" step="1">
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">BGM 音量</span>
+          <span class="setting-value" id="bgm-vol-label">70%</span>
+          <input type="range" class="vol-slider" id="bgm-vol-slider" min="0" max="100" value="70" step="1">
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">语音音量</span>
+          <span class="setting-value" id="voice-vol-label">80%</span>
+          <input type="range" class="vol-slider" id="voice-vol-slider" min="0" max="100" value="80" step="1">
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">自动模式</span>
+          <button class="toggle-btn" id="btn-auto-mode">关闭</button>
+        </div>
+        <button class="overlay-back-btn" id="btn-settings-close">返回</button>
+      </div>
+    </div>
+
+    <!-- Save/Load Overlay -->
+    <div id="saveload-overlay" class="overlay hidden">
+      <div class="overlay-panel">
+        <div class="overlay-title" id="saveload-title">存 档</div>
+        <div class="save-slots" id="save-slots"></div>
+        <div class="save-actions">
+          <button class="overlay-back-btn" id="btn-saveload-close">返回</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Backlog Overlay -->
+    <div id="backlog-overlay" class="hidden">
+      <button id="backlog-close">✕</button>
+      <div id="backlog-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Phaser CDN -->
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+
+<script type="module">
+// ============================================================
+//  MAIN — Phaser Game Bootstrap
+// ============================================================
+import { StoryData } from './js/engine/StoryData.js';
+import { DialogueManager } from './js/engine/DialogueManager.js';
+import { audio } from './js/engine/AudioManager.js';
+import { BootScene } from './js/scenes/BootScene.js';
+import { TitleScene } from './js/scenes/TitleScene.js';
+import { GameScene } from './js/scenes/GameScene.js';
+import { EndingScene } from './js/scenes/EndingScene.js';
+import { uiManager } from './js/ui/UIManager.js';
+
+// Global registry for non-Phaser classes to share
+window.__VN = {
+  story: StoryData,
+  dialogue: new DialogueManager(StoryData),
+  audio,
+  ui: uiManager,
+};
+
+const config = {
+  type: Phaser.AUTO,
+  width: 1920,
+  height: 1080,
+  parent: 'game-wrapper',
+  backgroundColor: '#0a0a0a',
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+  },
+  audio: {
+    disableWebAudio: false,
+  },
+  scene: [BootScene, TitleScene, GameScene, EndingScene],
+};
+
+const game = new Phaser.Game(config);
+window.__VN._game = game;
+
+// 初始化 UI 管理器（绑定 DOM 事件）
+uiManager.init();
+</script>
+
+</body>
+</html>
