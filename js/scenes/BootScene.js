@@ -38,15 +38,7 @@ export class BootScene extends Phaser.Scene {
       loadText.setText('Loading... ' + Math.floor(value * 100) + '%');
     });
 
-    // 只預載 BGM
-    var story = window.__VN?.story;
-    if (story) {
-      for (var key in story.bgm) {
-        var track = story.bgm[key];
-        var src = track.src || track.ogg;
-        if (src) this.load.audio('bgm_' + key, src);
-      }
-    }
+    // BGM 由 AudioManager 按需加載，Boot 階段不預載
 
     this.load.on('loaderror', function(file) {
       console.warn('[Boot] 資源加載失敗: ' + file.key);

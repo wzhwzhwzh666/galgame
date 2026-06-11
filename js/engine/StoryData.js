@@ -101,7 +101,7 @@ export const StoryData = {
     mystery: { src: 'assets/bgm/mystery_theme.mp3', label: '谜之旋律', volume: 0.6 },
     calm: { src: 'assets/bgm/calm_piano.mp3', label: '静谧钢琴', volume: 0.5 },
     tension: { src: 'assets/bgm/tension.mp3', label: '紧张', volume: 0.65 },
-    ending: { src: 'assets/bgm/ending_theme.mp3', label: '尾声', volume: 0.6 },
+    ending: { src: '', label: '尾声', volume: 0.6 },
   },
 
   // ---- 故事节点 ----
