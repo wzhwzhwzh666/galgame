@@ -81,6 +81,16 @@ export class BootScene extends Phaser.Scene {
       self.input.off('pointerdown', goTitle);
       document.removeEventListener('keydown', goTitle);
 
+      // 嘗試進入全屏（手機橫屏遊戲體驗）
+      var el = document.documentElement;
+      if (el.requestFullscreen) { el.requestFullscreen().catch(function() {}); }
+      else if (el.webkitRequestFullscreen) { el.webkitRequestFullscreen(); }
+      else if (el.msRequestFullscreen) { el.msRequestFullscreen(); }
+      // iOS Safari standalone hint
+      if (window.navigator.standalone === false) {
+        try { window.navigator.standalone = undefined; } catch(_) {}
+      }
+
       // 轉場
       self.tweens.add({
         targets: self.cameras.main, alpha: 0, duration: 500,
