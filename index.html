@@ -7,6 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#000000">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<link rel="manifest" href="/galgame/manifest.json">
 <title>黄昏教室 - 视觉小说</title>
 <meta name="screen-orientation" content="landscape">
 <meta name="x5-orientation" content="landscape">
@@ -390,6 +391,11 @@ window.__VN._game = game;
 
 // 初始化 UI 管理器（绑定 DOM 事件）
 uiManager.init();
+
+// 注册 Service Worker（首次访问后缓存全部资源）
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/galgame/sw.js').catch(function() {});
+}
 </script>
 
 </body>
